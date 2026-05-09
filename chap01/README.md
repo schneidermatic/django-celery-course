@@ -1,0 +1,286 @@
+# chap01 — Django + Celery + Redis Skeleton
+
+## What You Will Learn
+
+How Django, Celery, and Redis are wired together as a working multi-container
+application — before any business logic or custom tasks are added.
+
+```
+Django (web server) ──► Redis (broker) ──► Celery (worker)
+```
+
+This chapter contains no custom Django app and no application tasks. Its purpose
+is to show the minimum configuration required to connect all three services and
+verify that the pipeline is alive. chap02 builds directly on this foundation by
+adding the Message domain and the first real task.
+
+---
+
+## Prerequisites
+
+- Docker and Docker Compose installed
+- Port `8000` available on your machine
+
+---
+
+## Step 1 — Start the Project
+
+From the `chap01/` directory, source the helper file and run the setup command:
+
+```bash
+. .xrc
+x_setup
+```
+
+This builds the Docker image and starts three containers:
+
+| Container | Role |
+|---|---|
+| `redis` | Message broker |
+| `django` | Django dev server |
+| `celery` | Celery worker — listens for tasks on the default queue |
+
+Verify all containers are running:
+
+```bash
+docker compose ps
+```
+
+---
+
+## Step 2 — Verify Django
+
+Open [http://localhost:8000/admin/](http://localhost:8000/admin/) in your browser.
+The Django admin login page confirms the web server is running and the database
+migration has completed.
+
+---
+
+## Step 3 — Verify the Celery Worker
+
+Check the worker logs:
+
+```bash
+x_logs
+```
+
+Look for these lines in the `celery` container output:
+
+```
+celery  | -------------- celery@celery v5.x.x ...
+celery  | [config]
+celery  | .> app:         app:0x...
+celery  | .> transport:   redis://redis:6379/0
+celery  | .> results:     redis://redis:6379/0
+celery  | celery@celery ready.
+```
+
+The worker is connected to Redis and ready to receive tasks. No tasks are
+registered yet — that is intentional. chap02 introduces the first real task.
+
+---
+
+## Step 4 — Understand the Wiring
+
+There are three files that connect Django and Celery:
+
+**`app/app/celery.py`** — creates the Celery application:
+
+```python
+import os
+from celery import Celery
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')
+app = Celery('app')
+app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks()
+```
+
+`config_from_object` with `namespace='CELERY'` means every `CELERY_*` setting in
+`settings.py` is automatically picked up by Celery.
+
+**`app/app/__init__.py`** — ensures Django loads Celery at startup:
+
+```python
+from .celery import app as celery_app
+
+__all__ = ("celery_app",)
+```
+
+Without this import, the Celery app would not be initialised when Django starts.
+
+**`app/app/settings.py`** — broker and backend configuration:
+
+```python
+CELERY_BROKER_URL    = os.environ.get("CELERY_BROKER",  "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND", "redis://redis:6379/0")
+```
+
+Both values are injected via environment variables in `docker-compose.yml`, with
+`redis://redis:6379/0` as the default. The hostname `redis` resolves to the Redis
+container inside the Docker network.
+
+---
+
+## Step 5 — Stop and Clean Up
+
+```bash
+x_destroy
+```
+
+---
+
+## Project Structure
+
+```
+chap01/
+├── docker-compose.yml          # 3 services: redis, django, celery
+├── .xrc                        # Shell helpers
+└── app/                        # Django project root
+    ├── Dockerfile
+    ├── entrypoint.sh           # runs migrate, then exec "$@"
+    ├── requirements.txt        # Django + celery + redis + tzdata
+    ├── manage.py
+    └── app/                    # Django project package
+        ├── __init__.py         # imports celery_app so Django loads Celery on startup
+        ├── celery.py           # Celery app — broker config + autodiscover
+        ├── settings.py         # CELERY_BROKER_URL + CELERY_RESULT_BACKEND
+        ├── urls.py             # only /admin/ at this stage
+        ├── wsgi.py
+        └── asgi.py
+```
+
+Note: there is no custom Django app in chap01. `app.autodiscover_tasks()` finds
+nothing to register — the worker starts and waits, but has no tasks. chap02
+adds `worker01/` with the first real model and task.
+
+---
+
+## Celery Integration: Source Code Changes
+
+Three files are the absolute minimum required to wire Celery into a Django
+project.  All three are new in chap01 and carry forward unchanged to every
+subsequent chapter.
+
+---
+
+### `app/requirements.txt` — adds the Celery and Redis packages
+
+```
+celery==5.4.*
+redis==5.*
+```
+
+`celery` is the task queue framework itself.  `redis` is the Python client
+library for the message broker — Celery uses it under the hood to write
+messages to and read messages from Redis.  Both packages must be present in
+every container that runs Celery code (the Django image and any worker image).
+
+---
+
+### `app/app/celery.py` — creates the Celery application instance
+
+**What was added:** This file is entirely new.  It does not exist in a stock
+Django project generated by `django-admin startproject`.
+
+```python
+import os
+from celery import Celery
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')
+app = Celery('app')
+app.config_from_object('django.conf:settings', namespace='CELERY')
+app.autodiscover_tasks()
+```
+
+**Line-by-line explanation:**
+
+| Line | Why it is needed |
+|---|---|
+| `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'app.settings')` | When a Celery worker starts (`celery -A app worker`), it imports this file directly — outside of Django's normal startup sequence.  Setting the environment variable here ensures `config_from_object` can find `settings.py` even when Django hasn't launched first. |
+| `app = Celery('app')` | Creates the global Celery application object.  The name `'app'` matches the Django project package name; it appears in task names (e.g. `app.tasks.my_task`) and in Flower/log output. |
+| `app.config_from_object('django.conf:settings', namespace='CELERY')` | Reads all Django settings that start with `CELERY_` and applies them as Celery configuration, stripping the prefix.  `CELERY_BROKER_URL` → `broker_url`, `CELERY_RESULT_BACKEND` → `result_backend`, etc.  This keeps the broker URL defined in one place only. |
+| `app.autodiscover_tasks()` | Scans every package listed in `INSTALLED_APPS` for a `tasks.py` file and registers all `@shared_task` functions found there.  Without this call, Celery would start but know about no tasks, and any `.delay()` call would fail. |
+
+---
+
+### `app/app/__init__.py` — forces Django to load Celery at startup
+
+**What was added:** Two lines appended to the project's `__init__.py`.
+
+```python
+from .celery import app as celery_app
+
+__all__ = ("celery_app",)
+```
+
+**Why this is necessary:**
+Python only executes a module when it is first imported.  `celery.py` is never
+imported automatically by Django — without this explicit import it would only
+run when someone starts the `celery` CLI.
+
+The consequence of omitting this import:
+- The Django web process creates no Celery application instance.
+- `autodiscover_tasks()` is never called from the web process.
+- Any `.delay()` call from a view would raise an error or route to the wrong app.
+
+`app/app/__init__.py` is executed before any Django app code, making it the
+correct and only place for this bootstrap import.  The `__all__` export
+satisfies Django's autodiscovery conventions.
+
+---
+
+### `app/app/settings.py` — broker and result backend configuration
+
+**What was added:** Two settings appended at the bottom of `settings.py`.
+
+```python
+CELERY_BROKER_URL     = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND", "redis://redis:6379/0")
+```
+
+**What each setting does:**
+
+| Setting | Role |
+|---|---|
+| `CELERY_BROKER_URL` | Address of the message broker.  Celery writes task messages here when `.delay()` is called; the worker reads and removes them as it processes tasks. |
+| `CELERY_RESULT_BACKEND` | Address of the result store.  After a task completes, Celery writes the return value (or exception information) here so callers can retrieve it with `.get()`. |
+
+**Why environment variables:**
+Both values are injected by `docker-compose.yml` at runtime.  No connection
+string is hardcoded.  The fallback `redis://redis:6379/0` uses Docker's
+internal DNS — the hostname `redis` resolves to the `redis` service within the
+Compose network.  Outside Docker (e.g. local development) you would set these
+to `redis://localhost:6379/0`.
+
+**How they connect to `celery.py`:**
+`celery.py` calls `config_from_object(..., namespace='CELERY')`.  Celery strips
+the `CELERY_` prefix when loading: `CELERY_BROKER_URL` → `broker_url`,
+`CELERY_RESULT_BACKEND` → `result_backend`.  Any future `CELERY_*` setting in
+`settings.py` is automatically applied to Celery by the same mechanism.
+
+---
+
+## What chap02 Adds
+
+| | chap01 | chap02 |
+|---|---|---|
+| Custom Django app | None | `message/` (Message domain) |
+| Tasks registered | None | `send_message` |
+| Form UI | None | Message form at `/` |
+| Database model | None | `Message` (recipient, subject, body, status) |
+| Worker action | Waits (no tasks) | Processes task, writes result to DB |
+
+---
+
+## Available Shell Commands
+
+After sourcing `.xrc`:
+
+| Command | Description |
+|---|---|
+| `x_setup` | Build images and start all containers |
+| `x_destroy` | Stop containers and remove images and volumes |
+| `x_logs` | Stream logs from all containers |
+| `x_rmpyc` | Remove all `__pycache__` directories |
+| `x_ls` | List all available commands |

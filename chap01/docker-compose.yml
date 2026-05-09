@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+
+  redis:
+    image: redis:8-alpine
+
+  django:
+    container_name: django
+    build:
+      context: ./app
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./app:/usr/src/app/
+    ports:
+      - 8000:8000
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=0930jd30j9jd09j09j109fj01j9f
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    depends_on:
+      - redis
+
+  celery:
+    container_name: celery
+    hostname: celery
+    build:
+      context: ./app
+    command: celery --app=app worker -l INFO -E
+    volumes:
+      - ./app:/usr/src/app/
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=0930jd30j9jd09j09j109fj01j9f
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    depends_on:
+      - redis
+
+  flower:
+    container_name: flower
+    build:
+      context: ./app
+    command: celery -A app flower --port=5555
+    ports:
+      - 5555:5555
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=0930jd30j9jd09j09j109fj01j9f
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis

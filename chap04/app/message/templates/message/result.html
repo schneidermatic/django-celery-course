@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Messages</title>
+</head>
+<body>
+    <h1>Messages</h1>
+    {% if message_list %}
+        <ul>
+            {% for m in message_list %}
+                <li>
+                    <strong>{{ m.recipient }}</strong> — {{ m.subject }}
+                    [{{ m.message_type }}]
+                    <em>({{ m.status }})</em>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No messages yet.</p>
+    {% endif %}
+    <br>
+    <a href="{% url 'index' %}">Back to Form</a>
+</body>
+</html>

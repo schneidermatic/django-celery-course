@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payload Results</title>
+    {% if auto_refresh %}
+    <meta http-equiv="refresh" content="3">
+    {% endif %}
+</head>
+<body>
+    <h1>Payload Results</h1>
+
+    {% if auto_refresh %}
+    <p><em>Refreshing every 3 seconds while items are pending&hellip;</em></p>
+    {% endif %}
+
+    {% if payloads %}
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Label</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in payloads %}
+            <tr>
+                <td>{{ p.id }}</td>
+                <td>{{ p.label }}</td>
+                <td>
+                    {% if p.status == 'pending' %}
+                        <span style="color: orange;">pending</span>
+                    {% elif p.status == 'done' %}
+                        <span style="color: green;">done</span>
+                    {% else %}
+                        <span style="color: red;">{{ p.status }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ p.created_at }}</td>
+                <td>
+                    {% if p.status != 'pending' %}
+                        <a href="{% url 'detail' p.pk %}">View response</a>
+                    {% else %}
+                        &mdash;
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No payloads submitted yet.</p>
+    {% endif %}
+
+    <br>
+    <a href="{% url 'index' %}">Submit another payload</a>
+</body>
+</html>

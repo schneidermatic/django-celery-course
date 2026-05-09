@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+
+  redis:
+    image: redis:8-alpine
+
+  django:
+    container_name: django
+    build:
+      context: ./app
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./app:/usr/src/app/
+    ports:
+      - 8000:8000
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=0930jd30j9jd09j09j109fj01j9f
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    depends_on:
+      - redis
+
+  worker_urgent:
+    container_name: worker_urgent
+    hostname: worker_urgent
+    build:
+      context: ./worker01
+    command: celery -A celerytask worker -l INFO -Q urgent -E
+    volumes:
+      - ./app:/usr/src/app/
+      - ./worker01:/usr/src/worker01/
+    working_dir: /usr/src/worker01
+    environment:
+      - PYTHONPATH=/usr/src/app
+      - DJANGO_SETTINGS_MODULE=app.settings
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=0930jd30j9jd09j09j109fj01j9f
+      - DEBUG=1
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    depends_on:
+      - redis
+
+  worker_default:
+    container_name: worker_default
+    hostname: worker_default
+    build:
+      context: ./worker01
+    command: celery -A celerytask worker -l INFO -Q default -E
+    volumes:
+      - ./app:/usr/src/app/
+      - ./worker01:/usr/src/worker01/
+    working_dir: /usr/src/worker01
+    environment:
+      - PYTHONPATH=/usr/src/app
+      - DJANGO_SETTINGS_MODULE=app.settings
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=0930jd30j9jd09j09j109fj01j9f
+      - DEBUG=1
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    depends_on:
+      - redis
+
+  flower:
+    container_name: flower
+    build:
+      context: ./worker01
+    command: celery -A celerytask flower --port=5555
+    ports:
+      - 5555:5555
+    volumes:
+      - ./app:/usr/src/app/
+      - ./worker01:/usr/src/worker01/
+    working_dir: /usr/src/worker01
+    environment:
+      - PYTHONPATH=/usr/src/app
+      - DJANGO_SETTINGS_MODULE=app.settings
+      - CELERY_BROKER=redis://redis:6379/0
+      - CELERY_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=0930jd30j9jd09j09j109fj01j9f
+      - DEBUG=1
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    depends_on:
+      - redis

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payload Detail &mdash; {{ payload.label }}</title>
+</head>
+<body>
+    <h1>Payload Detail</h1>
+
+    <p><strong>Label:</strong> {{ payload.label }}</p>
+    <p><strong>Status:</strong>
+        {% if payload.status == 'done' %}
+            <span style="color: green;">done</span>
+        {% elif payload.status == 'failed' %}
+            <span style="color: red;">failed</span>
+        {% else %}
+            {{ payload.status }}
+        {% endif %}
+    </p>
+    <p><strong>HTTP Status Code:</strong>
+        {% if payload.response_status %}
+            {{ payload.response_status }}
+        {% else %}
+            N/A
+        {% endif %}
+    </p>
+
+    <h2>Response Body</h2>
+    {% if pretty_body %}
+    <pre>{{ pretty_body }}</pre>
+    {% else %}
+    <p>No response body recorded.</p>
+    {% endif %}
+
+    <br>
+    <a href="{% url 'list' %}">Back to list</a>
+</body>
+</html>

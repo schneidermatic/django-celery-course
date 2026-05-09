@@ -1,0 +1,20 @@
+#==============================================================================
+# FILE:    .xrc
+# AUTHOR:  Markus Schneider
+# PURPOSE: Shell helpers for chap06. Source with: . .xrc
+#==============================================================================
+
+export CWD=$(pwd)
+REPO_ROOT="$(cd "$CWD/.." && pwd)"
+export TOOLS_DIR="$REPO_ROOT/assets/tools"
+
+x_setup()   { "$TOOLS_DIR/x_setup.sh"   "$CWD"; }
+x_destroy() { "$TOOLS_DIR/x_destroy.sh" "$CWD"; }
+x_logs()    { docker compose -f "$CWD/docker-compose.yml" logs -f; }
+x_rmpyc()   { find "${1:-.}" -type d -name "__pycache__" -exec rm -r {} + -print; }
+
+x_ls() {
+    echo "Functions"
+    echo "==="
+    declare -F | awk '{print $3}' | grep '^x_' | sort
+}
