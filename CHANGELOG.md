@@ -1,3 +1,8 @@
+0.1.1 (2026-05-09)
+---------------------
+### Changed — README cleanup
+* Changed - `README.md`: removed Git Workflow section (workflow is documented in CLAUDE.md only)
+
 0.1.0 (2026-05-09)
 ---------------------
 ### New Feature — Initial course release (chap01–chap06)
