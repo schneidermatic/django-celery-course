@@ -1,3 +1,13 @@
+0.2.0 (2026-05-17)
+---------------------
+### Changed — Rename chapter directories to lab directories
+* Changed - `chap01/` → `lab01/`: directory renamed
+* Changed - `chap02/` → `lab02/`: directory renamed
+* Changed - `chap03/` → `lab03/`: directory renamed
+* Changed - `chap04/` → `lab04/`: directory renamed
+* Changed - `chap05/` → `lab05/`: directory renamed
+* Changed - `chap06/` → `lab06/`: directory renamed
+
 0.1.1 (2026-05-09)
 ---------------------
 ### Changed — README cleanup
