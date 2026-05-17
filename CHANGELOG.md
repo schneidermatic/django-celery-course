@@ -1,3 +1,12 @@
+0.2.2 (2026-05-17)
+---------------------
+### Changed — Update CLAUDE.md: fix chapXX → labXX, add lab06, correct Payload domain
+* Changed - `CLAUDE.md`: replaced all chapXX references with labXX throughout
+* Changed - `CLAUDE.md`: added lab06 (Async HTTP Request / Payload domain) to lab overview table
+* Changed - `CLAUDE.md`: added lab06-specific note explaining Payload domain and auto-refresh behaviour
+* Changed - `CLAUDE.md`: updated section headers (Standalone Worker Pattern, Priority Queue Gotcha) to use lab numbers
+* Changed - `CLAUDE.md`: added note that x_destroy also deletes app/db.sqlite3
+
 0.2.1 (2026-05-17)
 ---------------------
 ### Changed — Update README.md references from chap to lab
