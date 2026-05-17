@@ -1,3 +1,8 @@
+0.2.1 (2026-05-17)
+---------------------
+### Changed — Update README.md references from chap to lab
+* Changed - `README.md`: replaced all chapXX directory references with labXX
+
 0.2.0 (2026-05-17)
 ---------------------
 ### Changed — Rename chapter directories to lab directories

@@ -46,26 +46,26 @@ business problem.
 
 The chapters build on each other in a deliberate sequence:
 
-**chap01 → Verify the pipeline.** Connect Django, Celery, and Redis in Docker
+**lab01 → Verify the pipeline.** Connect Django, Celery, and Redis in Docker
 Compose. No custom tasks yet — just confirm the three services can see each other.
 
-**chap02 → First real task.** Add the `Message` model and `send_message`
+**lab02 → First real task.** Add the `Message` model and `send_message`
 task. Learn the basic async pattern: `@shared_task`, `.delay()`, result in DB.
 
-**chap03 → Architectural independence.** Move the worker into its own image with
+**lab03 → Architectural independence.** Move the worker into its own image with
 its own Celery app instance. Django and the worker share only the broker — neither
 knows how the other is built or deployed.
 
-**chap04 → Operational control by type.** Introduce two task types
+**lab04 → Operational control by type.** Introduce two task types
 (transactional vs. newsletter), two named queues, and two dedicated workers.
 Routing is declared once in `CELERY_TASK_ROUTES`; no changes to the task code.
 
-**chap05 → Routing by urgency level.** Combine the two previous techniques:
+**lab05 → Routing by urgency level.** Combine the two previous techniques:
 urgent tasks get their own dedicated queue and worker so they are never delayed
 by a backlog; normal and low tasks share a second queue where priority ordering
 (`apply_async(queue=..., priority=X)`) still applies within that tier.
 
-**chap06 → Async HTTP request with result storage.** Switch to a new domain —
+**lab06 → Async HTTP request with result storage.** Switch to a new domain —
 the `Payload` model — and make the worker perform a real outbound HTTP call to
 `httpbin.org`. The response body and status code are written back to the
 database. The results list page auto-refreshes every three seconds while any
@@ -78,12 +78,12 @@ pretty-prints the full JSON response.
 
 | Chapter | Title | New Concept | Key Files / Settings |
 |---|---|---|---|
-| [chap01](chap01/README.md) | Skeleton | `celery.py` wiring, `__init__.py` import, `CELERY_BROKER_URL` | no custom app, no tasks |
-| [chap02](chap02/README.md) | Basics | `@shared_task`, `.delay()`, DB result | `message/tasks.py` — `send_message` |
-| [chap03](chap03/README.md) | Standalone Worker | own image, `django.setup()`, volume + `PYTHONPATH` | `worker01/celerytask.py` |
-| [chap04](chap04/README.md) | Task Routing | `CELERY_TASK_ROUTES`, named queues, `-Q` flag | `worker_fast` + `worker_bulk` containers |
-| [chap05](chap05/README.md) | Priority Queues + Dedicated Workers | routing by urgency, `apply_async(queue=..., priority=X)` | `worker_urgent` + `worker_default` |
-| [chap06](chap06/README.md) | Async HTTP Request + Result Storage | outbound HTTP in a task, response stored in DB, auto-refreshing list | `payload/tasks.py` — `post_to_httpbin` |
+| [lab01](lab01/README.md) | Skeleton | `celery.py` wiring, `__init__.py` import, `CELERY_BROKER_URL` | no custom app, no tasks |
+| [lab02](lab02/README.md) | Basics | `@shared_task`, `.delay()`, DB result | `message/tasks.py` — `send_message` |
+| [lab03](lab03/README.md) | Standalone Worker | own image, `django.setup()`, volume + `PYTHONPATH` | `worker01/celerytask.py` |
+| [lab04](lab04/README.md) | Task Routing | `CELERY_TASK_ROUTES`, named queues, `-Q` flag | `worker_fast` + `worker_bulk` containers |
+| [lab05](lab05/README.md) | Priority Queues + Dedicated Workers | routing by urgency, `apply_async(queue=..., priority=X)` | `worker_urgent` + `worker_default` |
+| [lab06](lab06/README.md) | Async HTTP Request + Result Storage | outbound HTTP in a task, response stored in DB, auto-refreshing list | `payload/tasks.py` — `post_to_httpbin` |
 
 ---
 
@@ -109,11 +109,11 @@ pretty-prints the full JSON response.
 
 ## How to Work Through the Course
 
-Each chapter is a self-contained Docker project. Start from chap01 and work
+Each chapter is a self-contained Docker project. Start from lab01 and work
 forward. There is no shared state between chapters.
 
 ```bash
-cd chap01          # or chap02 … chap06
+cd lab01          # or lab02 … lab06
 . .xrc             # load shell helpers into the current session
 x_setup            # build Docker images and start all containers
 ```
@@ -141,21 +141,21 @@ Celery/
 ├── CLAUDE.md              ← guidance for Claude Code
 ├── assets/
 │   └── tools/             ← shared x_setup.sh and x_destroy.sh scripts
-├── chap01/                ← Skeleton
-├── chap02/                ← Basics
-├── chap03/                ← Standalone Worker
-├── chap04/                ← Task Routing
-├── chap05/                ← Task Prioritisation
-└── chap06/                ← Async HTTP Request + Result Storage
+├── lab01/                ← Skeleton
+├── lab02/                ← Basics
+├── lab03/                ← Standalone Worker
+├── lab04/                ← Task Routing
+├── lab05/                ← Task Prioritisation
+└── lab06/                ← Async HTTP Request + Result Storage
 ```
 
-Every `chapXX/` directory contains:
+Every `labXX/` directory contains:
 
 ```
-chapXX/
+labXX/
 ├── docker-compose.yml     ← all services for this chapter
 ├── .xrc                   ← shell helpers (x_setup, x_destroy, x_logs, …)
 ├── README.md              ← chapter walkthrough
 ├── app/                   ← Django project
-└── worker01/              ← standalone Celery worker (chap03–06 only)
+└── worker01/              ← standalone Celery worker (lab03–06 only)
 ```
